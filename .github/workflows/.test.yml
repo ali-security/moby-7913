@@ -9,10 +9,10 @@ on:
       storage:
         required: true
         type: string
-        default: "graphdriver"
+        default: graphdriver
 
 env:
-  GO_VERSION: "1.21.12"
+  GO_VERSION: 1.21.12
   GOTESTLIST_VERSION: v0.3.1
   TESTSTAT_VERSION: v0.1.25
   ITG_CLI_MATRIX_SIZE: 6
@@ -24,36 +24,30 @@ env:
 
 jobs:
   unit:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ github.event_name != 'pull_request' }}
     timeout-minutes: 120
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
-      -
-        name: Set up runner
+      - name: Set up runner
         uses: ./.github/actions/setup-runner
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: ${{ env.SETUP_BUILDX_VERSION }}
           driver-opts: image=${{ env.SETUP_BUILDKIT_IMAGE }}
           buildkitd-flags: --debug
-      -
-        name: Build dev image
+      - name: Build dev image
         uses: docker/bake-action@v5
         with:
           targets: dev
           set: |
             dev.cache-from=type=gha,scope=dev
-      -
-        name: Test
+      - name: Test
         run: |
           make -o build test-unit
-      -
-        name: Prepare reports
+      - name: Prepare reports
         if: always()
         run: |
           mkdir -p bundles /tmp/reports
@@ -61,8 +55,7 @@ jobs:
           tar -xzf /tmp/reports.tar.gz -C /tmp/reports
           sudo chown -R $(id -u):$(id -g) /tmp/reports
           tree -nh /tmp/reports
-      -
-        name: Upload reports
+      - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -71,67 +64,56 @@ jobs:
           retention-days: 1
 
   unit-report:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ github.event_name != 'pull_request' }}
     timeout-minutes: 10
     if: always()
     needs:
       - unit
     steps:
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-      -
-        name: Download reports
+      - name: Download reports
         uses: actions/download-artifact@v4
         with:
           name: test-reports-unit-${{ inputs.storage }}
           path: /tmp/reports
-      -
-        name: Install teststat
+      - name: Install teststat
         run: |
           go install github.com/vearutop/teststat@${{ env.TESTSTAT_VERSION }}
-      -
-        name: Create summary
+      - name: Create summary
         run: |
           find /tmp/reports -type f -name '*-go-test-report.json' -exec teststat -markdown {} \+ >> $GITHUB_STEP_SUMMARY
 
   docker-py:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ github.event_name != 'pull_request' }}
     timeout-minutes: 120
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
-      -
-        name: Set up runner
+      - name: Set up runner
         uses: ./.github/actions/setup-runner
-      -
-        name: Set up tracing
+      - name: Set up tracing
         uses: ./.github/actions/setup-tracing
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: ${{ env.SETUP_BUILDX_VERSION }}
           driver-opts: image=${{ env.SETUP_BUILDKIT_IMAGE }}
           buildkitd-flags: --debug
-      -
-        name: Build dev image
+      - name: Build dev image
         uses: docker/bake-action@v5
         with:
           targets: dev
           set: |
             dev.cache-from=type=gha,scope=dev
-      -
-        name: Test
+      - name: Test
         run: |
           make -o build test-docker-py
-      -
-        name: Prepare reports
+      - name: Prepare reports
         if: always()
         run: |
           mkdir -p bundles /tmp/reports
@@ -141,13 +123,11 @@ jobs:
           tree -nh /tmp/reports
 
           curl -sSLf localhost:16686/api/traces?service=integration-test-client > /tmp/reports/jaeger-trace.json
-      -
-        name: Test daemon logs
+      - name: Test daemon logs
         if: always()
         run: |
           cat bundles/test-docker-py/docker.log
-      -
-        name: Upload reports
+      - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -156,32 +136,27 @@ jobs:
           retention-days: 1
 
   integration-flaky:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ github.event_name != 'pull_request' }}
     timeout-minutes: 120
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
-      -
-        name: Set up runner
+      - name: Set up runner
         uses: ./.github/actions/setup-runner
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: ${{ env.SETUP_BUILDX_VERSION }}
           driver-opts: image=${{ env.SETUP_BUILDKIT_IMAGE }}
           buildkitd-flags: --debug
-      -
-        name: Build dev image
+      - name: Build dev image
         uses: docker/bake-action@v5
         with:
           targets: dev
           set: |
             dev.cache-from=type=gha,scope=dev
-      -
-        name: Test
+      - name: Test
         run: |
           make -o build test-integration-flaky
         env:
@@ -195,25 +170,21 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-20.04
+          - ubuntu-24.04
           - ubuntu-22.04
         mode:
-          - ""
+          - ''
           - rootless
           - systemd
           #- rootless-systemd FIXME: https://github.com/moby/moby/issues/44084
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
-      -
-        name: Set up runner
+      - name: Set up runner
         uses: ./.github/actions/setup-runner
-      -
-        name: Set up tracing
+      - name: Set up tracing
         uses: ./.github/actions/setup-tracing
-      -
-        name: Prepare
+      - name: Prepare
         run: |
           CACHE_DEV_SCOPE=dev
           if [[ "${{ matrix.mode }}" == *"rootless"* ]]; then
@@ -224,28 +195,24 @@ jobs:
             CACHE_DEV_SCOPE="${CACHE_DEV_SCOPE}systemd"
           fi
           echo "CACHE_DEV_SCOPE=${CACHE_DEV_SCOPE}" >> $GITHUB_ENV
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: ${{ env.SETUP_BUILDX_VERSION }}
           driver-opts: image=${{ env.SETUP_BUILDKIT_IMAGE }}
           buildkitd-flags: --debug
-      -
-        name: Build dev image
+      - name: Build dev image
         uses: docker/bake-action@v5
         with:
           targets: dev
           set: |
             dev.cache-from=type=gha,scope=${{ env.CACHE_DEV_SCOPE }}
-      -
-        name: Test
+      - name: Test
         run: |
           make -o build test-integration
         env:
           TEST_SKIP_INTEGRATION_CLI: 1
-      -
-        name: Prepare reports
+      - name: Prepare reports
         if: always()
         run: |
           reportsName=${{ matrix.os }}
@@ -262,13 +229,11 @@ jobs:
           tree -nh $reportsPath
 
           curl -sSLf localhost:16686/api/traces?service=integration-test-client > $reportsPath/jaeger-trace.json
-      -
-        name: Test daemon logs
+      - name: Test daemon logs
         if: always()
         run: |
           cat bundles/test-integration/docker.log
-      -
-        name: Upload reports
+      - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -277,54 +242,45 @@ jobs:
           retention-days: 1
 
   integration-report:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ github.event_name != 'pull_request' }}
     timeout-minutes: 10
     if: always()
     needs:
       - integration
     steps:
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-      -
-        name: Download reports
+      - name: Download reports
         uses: actions/download-artifact@v4
         with:
           path: /tmp/reports
           pattern: test-reports-integration-${{ inputs.storage }}-*
           merge-multiple: true
-      -
-        name: Install teststat
+      - name: Install teststat
         run: |
           go install github.com/vearutop/teststat@${{ env.TESTSTAT_VERSION }}
-      -
-        name: Create summary
+      - name: Create summary
         run: |
           find /tmp/reports -type f -name '*-go-test-report.json' -exec teststat -markdown {} \+ >> $GITHUB_STEP_SUMMARY
 
   integration-cli-prepare:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ github.event_name != 'pull_request' }}
     outputs:
       matrix: ${{ steps.tests.outputs.matrix }}
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-      -
-        name: Install gotestlist
-        run:
-          go install github.com/crazy-max/gotestlist/cmd/gotestlist@${{ env.GOTESTLIST_VERSION }}
-      -
-        name: Create matrix
+      - name: Install gotestlist
+        run: go install github.com/crazy-max/gotestlist/cmd/gotestlist@${{ env.GOTESTLIST_VERSION }}
+      - name: Create matrix
         id: tests
         working-directory: ./integration-cli
         run: |
@@ -335,13 +291,12 @@ jobs:
           # take a long time to run.
           matrix="$(gotestlist -d ${{ env.ITG_CLI_MATRIX_SIZE }} -o "./..." -o "DockerSwarmSuite" -o "DockerNetworkSuite|DockerExternalVolumeSuite" ./...)"
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
-      -
-        name: Show matrix
+      - name: Show matrix
         run: |
           echo ${{ steps.tests.outputs.matrix }}
 
   integration-cli:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ github.event_name != 'pull_request' }}
     timeout-minutes: 120
     needs:
@@ -351,38 +306,31 @@ jobs:
       matrix:
         test: ${{ fromJson(needs.integration-cli-prepare.outputs.matrix) }}
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
-      -
-        name: Set up runner
+      - name: Set up runner
         uses: ./.github/actions/setup-runner
-      -
-        name: Set up tracing
+      - name: Set up tracing
         uses: ./.github/actions/setup-tracing
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: ${{ env.SETUP_BUILDX_VERSION }}
           driver-opts: image=${{ env.SETUP_BUILDKIT_IMAGE }}
           buildkitd-flags: --debug
-      -
-        name: Build dev image
+      - name: Build dev image
         uses: docker/bake-action@v5
         with:
           targets: dev
           set: |
             dev.cache-from=type=gha,scope=dev
-      -
-        name: Test
+      - name: Test
         run: |
           make -o build test-integration
         env:
           TEST_SKIP_INTEGRATION: 1
-          TESTFLAGS: "-test.run (${{ matrix.test }})/"
-      -
-        name: Prepare reports
+          TESTFLAGS: -test.run (${{ matrix.test }})/
+      - name: Prepare reports
         if: always()
         run: |
           reportsName=$(echo -n "${{ matrix.test }}" | sha256sum | cut -d " " -f 1)
@@ -397,13 +345,11 @@ jobs:
           tree -nh $reportsPath
 
           curl -sSLf localhost:16686/api/traces?service=integration-test-client > $reportsPath/jaeger-trace.json
-      -
-        name: Test daemon logs
+      - name: Test daemon logs
         if: always()
         run: |
           cat bundles/test-integration/docker.log
-      -
-        name: Upload reports
+      - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -412,30 +358,26 @@ jobs:
           retention-days: 1
 
   integration-cli-report:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ github.event_name != 'pull_request' }}
     timeout-minutes: 10
     if: always()
     needs:
       - integration-cli
     steps:
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-      -
-        name: Download reports
+      - name: Download reports
         uses: actions/download-artifact@v4
         with:
           path: /tmp/reports
           pattern: test-reports-integration-cli-${{ inputs.storage }}-*
           merge-multiple: true
-      -
-        name: Install teststat
+      - name: Install teststat
         run: |
           go install github.com/vearutop/teststat@${{ env.TESTSTAT_VERSION }}
-      -
-        name: Create summary
+      - name: Create summary
         run: |
           find /tmp/reports -type f -name '*-go-test-report.json' -exec teststat -markdown {} \+ >> $GITHUB_STEP_SUMMARY
